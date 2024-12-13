@@ -10,8 +10,7 @@ Un script Bash permet de lancer une machine Alpine LFS (Linux From Scratch) afin
 Il y a 2 users, un root et un user avec des logins differents.
 
 Voici une liste de chose que j'aimerai faire : 
-- Un Keylogger
-- Cacher sa presence
-- Backdoor
-- Persistence
-- Escalade de Privileges.
+- Un reverse Shell
+- Une escalation de Privilege
+- Une persistence au demarrage
+- Cacher les processus

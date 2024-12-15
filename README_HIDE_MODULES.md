@@ -1,3 +1,5 @@
+# Rootkit hide_modules - Guide d'utilisation
+
 ## Description
 
 Ce module du noyau Linux est conçu pour fournir discrétion et protection pour des modules spécifiques. Il cache les modules spécifiés de la liste des modules du noyau et les protège contre leur déchargement en augmentant leur compteur de références. De plus, le module se cache lui-même de la liste des modules du noyau et du sysfs, assurant une discrétion maximale.

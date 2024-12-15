@@ -1,70 +1,98 @@
-## Description du Projet
+# README - Projet Rootkit Linux
 
-Ce projet explore la création et l’utilisation de rootkits pour Linux en manipulant des appels système et des modules kernel. Trois principaux codes ont été développés pour expérimenter et mettre en œuvre des fonctionnalités variées :
+## Introduction
 
-1. **Hook sur `kill` pour élévation de privilèges** : Fonctionnalité implémentée et testée avec succès.
-2. **Hook sur `open` pour élévation de privilèges** : Tentative réalisée sans succès, bien que le code ait été fonctionnel.
-3. **Cacher un utilisateur** : Fonctionnalité non finalisée par manque de temps.
+Ce document résume les différentes parties du projet de rootkit Linux, incluant les modules implémentés et les essais effectués pour atteindre les objectifs fixés. Chaque section expliquera le fonctionnement des modules, les technologies utilisées, et les résultats obtenus.
 
 ---
 
-## Détails des Modules
+## Modules Implémentés
 
-### 1. **Hook sur `kill` pour obtenir les privilèges root**
+### **1. `kill.c` - Hook de syscall pour l'élévation des privilèges**
 
-Ce module utilise un hook sur l'appel système `kill` pour accorder les privilèges root à l'utilisateur. Lorsqu'un signal spécifique (par exemple, `SIGUSR1`) est envoyé, le module modifie les credentials du processus appelant pour les définir en tant que root.
+- **Description** :
+  Ce module utilise un hook sur le syscall `kill` (à travers les Kprobes) pour attribuer des privilèges root à un processus lorsque celui-ci envoie un signal spécifique (dans ce cas, le signal 62).
 
-#### Fonctionnalités principales :
+- **Objectif** :
+  Comprendre comment utiliser les Kprobes pour détourner un appel système et exploiter cette technique pour fournir des privilèges élevés.
 
-- **Détournement de l'appel `kill`** : Grâce à un kprobe, l'appel est intercepté avant son exécution.
-- **Élévation des privilèges** : Lors de la réception du signal défini, les credentials sont modifiés pour accorder les privilèges root.
+- **Statut** : Fonctionnel et testé avec succès.
 
-#### Résultats :
+- **Technologies Utilisées** :
 
-- Fonctionnalité testée avec succès. L'utilisateur a pu obtenir les privilèges root comme prévu.
+  - Kprobes pour intercepter le syscall.
+  - Gestion des credentials pour attribuer les privilèges root au processus appelant.
 
----
-
-### 2. **Hook sur `open` pour obtenir les privilèges root**
-
-Une tentative a été réalisée pour intercepter l'appel système `open`. L'objectif était d'accorder les privilèges root lorsque l'utilisateur tentait d'accéder à un fichier spécifique (nommé `trigger_file`).
-
-#### Fonctionnalités principales :
-
-- **Détournement de l'appel `open`** : Le module intercepte l'ouverture de fichiers pour vérifier si le fichier cible est accédé.
-- **Élévation des privilèges** : Si le fichier déclencheur est détecté, les credentials de l'utilisateur sont modifiés pour accorder les privilèges root.
-
-#### Résultats :
-
-- Aucun bug ou crash détecté.
-- L'élévation des privilèges n'a pas fonctionné, malgré un code fonctionnel et sans erreur apparente. Les raisons peuvent être liées à des incompatibilités ou des limitations kernel.
+- **Limitation** : Bien que ce module soit fonctionnel, il est interdit dans le cadre du projet d'utiliser l'appel système `kill` pour l'élévation des privilèges.
 
 ---
 
-### 3. **Cacher un utilisateur**
+### **2. `open.c` - Tentative d'élévation des privilèges via le syscall openat**
 
-Ce module visait à dissimuler un utilisateur spécifique du système. L'objectif était de rendre invisible l'utilisateur dans des contextes tels que :
+- **Description** :
+  Ce module tente d'utiliser un hook sur le syscall `openat` pour éléver les privilèges lorsqu'un utilisateur ouvre un fichier spécifique (à définir dans le code).
 
-- La commande `cat /etc/passwd`
-- Les résultats des appels système impliquant l'utilisateur.
+- **Objectif** :
+  Explorer une autre méthode que `kill` pour obtenir des privilèges root en interceptant un syscall différent et en détectant une condition précise.
 
-#### Fonctionnalités principales :
+- **Statut** :
 
-- **Manipulation de `getdents64`** : Le module tente de filtrer les entrées du répertoire utilisateur pour exclure un utilisateur spécifique.
-- **Interaction avec les structures kernel** : La manipulation des structures de répertoires est au cœur de cette tentative.
+  - Implémenté et compilé sans erreur.
+  - Aucune erreur d'exécution.
+  - Cependant, les privilèges root n'étaient pas accordés à l'utilisateur malgré l'exécution du fichier spécifique. Le problème n'a pas été résolu par manque de temps.
 
-#### Résultats :
+- **Technologies Utilisées** :
 
-- Le code a été partiellement implémenté, mais n'a pas été finalisé par manque de temps.
-- Aucun test concluant n'a été réalisé.
+  - Kprobes pour intercepter `openat`.
+  - Gestion des credentials pour attribuer des privilèges root.
+
+- **Limitation** : Les privilèges root n'ont pas été accordés comme prévu.
+
+---
+
+### **3. `hide_user.c` - Tentative de dissimulation d'un utilisateur**
+
+- **Description** :
+  Ce module a pour but de cacher un utilisateur spécifique dans le système. L'objectif était d'utiliser les hooks sur les syscalls pour manipuler les données retournées par le noyau, notamment lors de la lecture des fichiers `passwd` ou `shadow`.
+
+- **Objectif** :
+  Fournir une méthode pour masquer totalement l'existence d'un utilisateur (ex. : UID 1337) sur le système.
+
+- **Statut** :
+
+  - Code implémenté mais non fonctionnel.
+  - Par manque de temps, le module n'a pas atteint son objectif de cacher efficacement l'utilisateur.
+
+- **Technologies Utilisées** :
+  - Hooks sur les syscalls.
+  - Manipulation des structures de données utilisateur.
 
 ---
 
-## Outils et Techniques Utilisés
+### **4. `persistence.c` - Module de persistance avec écriture dans `rc.local`**
 
-- **Kprobes** : Utilisés pour intercepter les appels système tels que `kill` et `open`.
-- **Manipulation des Credentials** : Modification des credentials de processus pour accorder les privilèges root.
-- **Hooks Kernel** : Implémentation de hooks pour manipuler le comportement des appels système.
-- **Structures du Kernel** : Exploration des structures kernel liées aux utilisateurs et aux fichiers.
+- **Description** :
+  Ce module écrit dans le fichier `/etc/rc.local` pour insérer les modules de rootkit (à savoir `hide_modules`, `reverse` et `privesc`) au démarrage du système. En cas d'absence de `rc.local`, il crée le fichier et y ajoute les commandes nécessaires. De plus, il gère également un service OpenRC pour garantir que le fichier `rc.local` est exécuté.
+
+- **Objectif** :
+  Assurer la persistance des rootkits au redémarrage du système.
+
+- **Statut** :
+
+  - Le module crée correctement le fichier `/etc/rc.local` et y ajoute les commandes nécessaires.
+  - En revanche, le contenu de `rc.local` est effacé au redémarrage du système. La raison n'a pas pu être identifiée par manque de temps.
+
+- **Technologies Utilisées** :
+
+  - API du noyau pour créer et modifier des fichiers.
+  - Intégration avec OpenRC via la création d'un script dans `/etc/init.d/`.
+
+- **Limitation** :
+  - La persistance n'est pas effective car le fichier `rc.local` se vide au redémarrage.
+  - Par manque de temps, il n'a pas été possible de diagnostiquer et corriger ce problème.
 
 ---
+
+## Conclusion
+
+Ce projet a permis d'explorer diverses techniques pour créer un rootkit fonctionnel et persistant. Bien que certaines fonctionnalités soient pleinement implémentées (comme le hook de syscall avec `kill`), d'autres sont restées incomplètes par manque de temps ou de solutions adaptées. Le module `persistence.c` représente un état proche d'une solution complète pour la persistance, mais le problème lié à la vidange du fichier `rc.local` au redémarrage reste un obstacle à surmonter.

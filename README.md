@@ -5,19 +5,39 @@
 1. **Configurer et lancer le système :**
 
    ```bash
-    A remplir
+    cd linux-6.10.10/
+    mkdir module_root && cd module_root
+    touch hello_mod.c && touch Makefile
+    vim hello_mod.c
    ```
 
 2. **Compiler les modules :**
 
-   ```bash
-    A remplir
+   ```MakeFile
+    obj-m += hello_mod.o
+    obj-m += nouv_mod.o
+    KDIR := /home/path/linux-6.10.10
+    PWD := $(shell pwd)
+
+    all:
+            $(MAKE) -C $(KDIR) M=$(PWD) modules
+
+    clean:
+            $(MAKE) -C $(KDIR) M=$(PWD) clean
    ```
 
-3. **Lancer l'Alpine avec les modules intégrés :**
+3. **On va compiler le kernel depuis le fichier linux-6.10.10 :**
 
    ```bash
-   A remplir
+    make -j$(nproc)
+    make modules
+    sudo make modules_install
+   ```
+
+4. **Lancer l'Alpine avec les modules intégrés :**
+
+   ```bash
+   sudo ./scriptLancementAlpine.sh linux-6.10.10/arch/x86/boot/bzImage
    ```
 
 ### **2. Une fois dans l'Alpine**
